@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 *)",
+      "Bash(docker --version)",
+      "Bash(curl -s http://localhost:8080/instance/fetchInstances -H 'apikey: evolution_key_recabandono_2026')",
+      "Bash(curl -s -X POST http://localhost:8080/instance/create -H 'apikey: evolution_key_recabandono_2026' -H 'Content-Type: application/json' -d '{\"instanceName\": \"6048678\", \"integration\": \"WHATSAPP-BAILEYS\", \"qrcode\": true}')"
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}App instalado com sucesso{% endblock %}
+
+{% block layout %}
+<div class="page-center">
+  <div class="page-box">
+    <div class="page-icon-wrap success-icon">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <h1 class="page-center-title">App instalado com sucesso!</h1>
+    <p class="page-center-desc">Sua integração com a Nuvemshop está ativa. Configure suas credenciais da Meta API para começar a recuperar abandonos.</p>
+    {% if store_id %}
+    <a href="/painel/{{ store_id }}" class="btn btn-primary">Configurar agora</a>
+    {% else %}
+    <a href="/" class="btn btn-primary">Ir para o painel</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

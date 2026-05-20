@@ -1,0 +1,470 @@
+{% extends "base.html" %}
+{% block title %}Painel — {{ loja.nome_loja or loja.store_id }}{% endblock %}
+
+{% block layout %}
+{%- set msg_padrao -%}
+Olá, {nome}! 👋
+
+Você deixou alguns itens no carrinho. Preparamos uma oferta especial para você:
+
+🏷️ Use o cupom *{cupom}* e ganhe *{desconto}% de desconto* na sua compra.
+
+Válido por 24 horas. É só aplicar no checkout! 😉
+{%- endset -%}
+
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#fff">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <div>
+        <span class="sidebar-logo-text">RecAbandono</span>
+        <span class="sidebar-beta">Beta</span>
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="sidebar-item active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Painel
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-store-name">{{ loja.nome_loja or loja.store_id }}</div>
+      <div class="sidebar-status">
+        <div class="status-dot {% if config.ativo %}active{% else %}inactive{% endif %}"></div>
+        <span class="sidebar-status-label">{% if config.ativo %}Ativo{% else %}Inativo{% endif %}</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <div class="page-header">
+      <h1 class="page-title">
+        Painel de controle
+        <span id="wa-badge" class="wa-connected-badge" style="display:none">
+          <span class="wa-badge-dot"></span> WhatsApp conectado
+        </span>
+      </h1>
+      <p class="page-subtitle">Gerencie sua integração WhatsApp e configure as ofertas de recuperação</p>
+    </div>
+
+    <div class="page-content">
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon indigo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+          </div>
+          <div>
+            <div class="stat-value">{{ stats.total }}</div>
+            <div class="stat-label">Abandonos detectados</div>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon green">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
+          <div>
+            <div class="stat-value">{{ stats.enviados }}</div>
+            <div class="stat-label">Mensagens enviadas</div>
+          </div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-icon yellow">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+              <polyline points="17 6 23 6 23 12"/>
+            </svg>
+          </div>
+          <div>
+            <div class="stat-value">{{ stats.taxa }}%</div>
+            <div class="stat-label">Taxa de recuperação</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WhatsApp QR Code -->
+      <div class="card" id="wa-card">
+        <div class="card-header">
+          <div class="card-header-info">
+            <div class="card-header-title">📱 Conectar WhatsApp</div>
+            <div class="card-header-subtitle">Escaneie o QR Code com seu WhatsApp para começar a enviar mensagens</div>
+          </div>
+        </div>
+        <div class="card-body">
+
+          <!-- Estado: Desconectado -->
+          <div id="qr-section" style="display:none">
+            <div class="qr-layout">
+              <div class="qr-left">
+                <div class="qr-frame" id="qr-frame">
+                  <div id="qr-loading" class="qr-loading">
+                    <div class="spinner" style="border-color:rgba(99,102,241,0.2);border-top-color:var(--accent);width:32px;height:32px;border-width:3px"></div>
+                    <span>Gerando QR Code...</span>
+                  </div>
+                  <img id="qr-img" src="" alt="QR Code WhatsApp" style="display:none;width:200px;height:200px;border-radius:8px">
+                </div>
+                <button type="button" class="btn-refresh" id="btn-refresh-qr" onclick="carregarQRCode()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"/>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                  </svg>
+                  Atualizar QR Code
+                </button>
+              </div>
+              <div class="qr-right">
+                <div class="qr-steps">
+                  <div class="qr-step"><span class="qr-step-num">1</span><span>Abra o <strong>WhatsApp</strong> no seu celular</span></div>
+                  <div class="qr-step"><span class="qr-step-num">2</span><span>Toque em <strong>⋮ Mais opções</strong> (Android) ou <strong>Ajustes</strong> (iPhone)</span></div>
+                  <div class="qr-step"><span class="qr-step-num">3</span><span>Toque em <strong>Dispositivos conectados</strong></span></div>
+                  <div class="qr-step"><span class="qr-step-num">4</span><span>Toque em <strong>Conectar dispositivo</strong> e escaneie o QR Code ao lado</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Estado: Conectado -->
+          <div id="connected-section" style="display:none">
+            <div class="connected-box">
+              <div class="connected-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+              </div>
+              <div>
+                <div class="connected-title">WhatsApp conectado</div>
+                <div class="connected-desc">Seu número está ativo e pronto para enviar mensagens de recuperação.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carregando estado inicial -->
+          <div id="wa-init-loading" class="qr-loading" style="padding:24px 0">
+            <div class="spinner" style="border-color:rgba(99,102,241,0.2);border-top-color:var(--accent);width:24px;height:24px;border-width:2px"></div>
+            <span>Verificando conexão...</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Form -->
+      <form id="config-form" method="post" action="/painel/{{ loja.store_id }}/config">
+
+        <!-- Mensagem de recuperação -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-info">
+              <div class="card-header-title">Mensagem de recuperação</div>
+              <div class="card-header-subtitle">Mensagem enviada ao cliente. Use as variáveis para personalizar.</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="message-panel">
+              <div>
+                <div class="message-panel-title">Editar mensagem</div>
+                <div class="var-tags">
+                  <span class="var-tag" data-var="{nome}">{nome}</span>
+                  <span class="var-tag" data-var="{cupom}">{cupom}</span>
+                  <span class="var-tag" data-var="{desconto}">{desconto}</span>
+                </div>
+                <textarea id="mensagem_template" name="mensagem_template" rows="9">{{ config.mensagem_template or msg_padrao }}</textarea>
+                <p class="hint">As variáveis são substituídas automaticamente no envio</p>
+              </div>
+              <div>
+                <div class="message-panel-title">Preview ao vivo</div>
+                <div class="wa-preview">
+                  <div class="wa-bubble" id="wa-bubble"></div>
+                  <div class="wa-time">10:42 ✓✓</div>
+                </div>
+                <p class="wa-preview-note">Prévia com dados de exemplo</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Configurações da oferta -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-info">
+              <div class="card-header-title">Configurações da oferta</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cupom">Cupom</label>
+                <input type="text" id="cupom" name="cupom"
+                       value="{{ config.cupom or 'VOLTA15' }}"
+                       placeholder="VOLTA15">
+              </div>
+              <div class="form-group">
+                <label for="desconto_pct">Desconto</label>
+                <div class="input-wrap">
+                  <input type="number" id="desconto_pct" name="desconto_pct"
+                         class="suffix-pad"
+                         value="{{ config.desconto_pct or 15 }}"
+                         min="1" max="100">
+                  <span class="input-suffix">%</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="minutos_espera">Espera</label>
+                <div class="input-wrap">
+                  <input type="number" id="minutos_espera" name="minutos_espera"
+                         class="suffix-pad"
+                         value="{{ config.minutos_espera or 10 }}"
+                         min="1" max="1440">
+                  <span class="input-suffix">min</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="toggle-group">
+              <label class="toggle">
+                <input type="checkbox" id="ativo-toggle" name="ativo" value="on" {% if config.ativo %}checked{% endif %}>
+                <span class="slider-track"></span>
+              </label>
+              <div class="toggle-info">
+                <div class="toggle-label">App ativo</div>
+                <div class="toggle-desc">Quando ativo, detecta abandonos e envia mensagens automaticamente</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-save" id="save-btn">Salvar configurações</button>
+      </form>
+
+      <!-- Recent sends -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-info">
+            <div class="card-header-title">Últimos envios</div>
+          </div>
+        </div>
+        {% if envios %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Telefone</th>
+                <th>Status</th>
+                <th>Data/Hora</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in envios %}
+              <tr>
+                <td>{{ e.cliente_nome or '—' }}</td>
+                <td style="color:var(--text-secondary)">{{ e.telefone or '—' }}</td>
+                <td>
+                  <span class="badge badge-{{ e.status }}">{{ e.status.replace('_', ' ') }}</span>
+                  {% if e.erro_msg %}
+                  <span title="{{ e.erro_msg }}" style="cursor:help;color:var(--text-secondary);margin-left:4px">ⓘ</span>
+                  {% endif %}
+                </td>
+                <td style="color:var(--text-secondary)">{{ e.criado_em.strftime('%d/%m/%Y %H:%M') if e.criado_em else '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+          </svg>
+          <div class="empty-state-title">Nenhum abandono registrado ainda</div>
+          <div class="empty-state-desc">Os dados aparecerão aqui assim que a Nuvemshop enviar o primeiro webhook</div>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+(function () {
+  const storeId = '{{ loja.store_id }}';
+
+  /* ── WhatsApp QR / Status ── */
+  const initLoading   = document.getElementById('wa-init-loading');
+  const qrSection     = document.getElementById('qr-section');
+  const connSection   = document.getElementById('connected-section');
+  const qrImg         = document.getElementById('qr-img');
+  const qrLoading     = document.getElementById('qr-loading');
+  const waBadge       = document.getElementById('wa-badge');
+  let pollingInterval = null;
+
+  function mostrarConectado() {
+    qrSection.style.display   = 'none';
+    connSection.style.display = 'block';
+    waBadge.style.display     = 'inline-flex';
+    if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+  }
+
+  function mostrarDesconectado() {
+    connSection.style.display = 'none';
+    qrSection.style.display   = 'block';
+    waBadge.style.display     = 'none';
+  }
+
+  async function carregarQRCode() {
+    qrImg.style.display     = 'none';
+    qrLoading.style.display = 'flex';
+    try {
+      const r    = await fetch(`/painel/${storeId}/qrcode`);
+      const data = await r.json();
+      if (data.conectado) {
+        mostrarConectado();
+        return;
+      }
+      if (data.qrcode) {
+        qrImg.src           = data.qrcode;
+        qrImg.style.display = 'block';
+        qrLoading.style.display = 'none';
+      } else {
+        qrLoading.style.display = 'none';
+        qrImg.style.display     = 'none';
+      }
+    } catch (e) {
+      qrLoading.style.display = 'none';
+    }
+  }
+
+  function iniciarPolling() {
+    if (pollingInterval) return;
+    pollingInterval = setInterval(async () => {
+      try {
+        const r    = await fetch(`/painel/${storeId}/status`);
+        const data = await r.json();
+        if (data.conectado) {
+          mostrarConectado();
+        }
+      } catch (e) {}
+    }, 5000);
+  }
+
+  async function inicializar() {
+    try {
+      const r    = await fetch(`/painel/${storeId}/status`);
+      const data = await r.json();
+      initLoading.style.display = 'none';
+      if (data.conectado) {
+        mostrarConectado();
+      } else {
+        mostrarDesconectado();
+        carregarQRCode();
+        iniciarPolling();
+      }
+    } catch (e) {
+      initLoading.style.display = 'none';
+      mostrarDesconectado();
+    }
+  }
+
+  window.carregarQRCode = carregarQRCode;
+  inicializar();
+
+  /* ── Message preview ── */
+  const textarea = document.getElementById('mensagem_template');
+  const bubble   = document.getElementById('wa-bubble');
+  const cupomEl  = document.getElementById('cupom');
+  const descEl   = document.getElementById('desconto_pct');
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function renderPreview() {
+    let text = textarea.value;
+    text = text.replace(/\{nome\}/g, 'João Silva');
+    text = text.replace(/\{cupom\}/g, cupomEl.value || 'VOLTA15');
+    text = text.replace(/\{desconto\}/g, descEl.value || '15');
+    text = esc(text);
+    text = text.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+    text = text.replace(/\n/g, '<br>');
+    bubble.innerHTML = text;
+  }
+
+  textarea.addEventListener('input', renderPreview);
+  cupomEl.addEventListener('input', renderPreview);
+  descEl.addEventListener('input', renderPreview);
+  renderPreview();
+
+  /* ── Variable tag insertion ── */
+  document.querySelectorAll('.var-tag').forEach(function(tag) {
+    tag.addEventListener('click', function() {
+      const v = tag.dataset.var;
+      const s = textarea.selectionStart;
+      const e = textarea.selectionEnd;
+      textarea.value = textarea.value.slice(0, s) + v + textarea.value.slice(e);
+      textarea.selectionStart = textarea.selectionEnd = s + v.length;
+      textarea.focus();
+      renderPreview();
+    });
+  });
+
+  /* ── AJAX save ── */
+  const form    = document.getElementById('config-form');
+  const saveBtn = document.getElementById('save-btn');
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    saveBtn.disabled  = true;
+    saveBtn.className = 'btn-save';
+    saveBtn.innerHTML = '<span class="spinner"></span> Salvando...';
+
+    try {
+      const res  = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await res.json();
+
+      if (data.ok) {
+        saveBtn.className = 'btn-save success';
+        saveBtn.innerHTML = 'Configurações salvas! ✓';
+      } else {
+        saveBtn.className = 'btn-save error-state';
+        saveBtn.innerHTML = 'Erro ao salvar';
+      }
+    } catch (err) {
+      saveBtn.className = 'btn-save error-state';
+      saveBtn.innerHTML = 'Erro ao salvar';
+    }
+
+    setTimeout(function() {
+      saveBtn.disabled  = false;
+      saveBtn.className = 'btn-save';
+      saveBtn.innerHTML = 'Salvar configurações';
+    }, 3000);
+  });
+}());
+</script>
+{% endblock %}
